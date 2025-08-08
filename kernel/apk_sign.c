@@ -391,3 +391,32 @@ bool is_manager_apk(char *path)
 	return check_v2_signature(path, expected_manager_size, expected_manager_hash);
 #endif
 }
+
+bool ksu_is_manager_apk(char *path)
+{
+	int tries = 0;
+
+	while (tries++ < 10) {
+		if (!is_lock_held(path))
+			break;
+
+		pr_info("%s: waiting for %s\n", __func__, path);
+		msleep(100);
+	}
+
+	// let it go, if retry fails, check_v2_signature will fail to open it anyway
+	if (tries == 10) {
+		pr_info("%s: timeout for %s\n", __func__, path);
+		return false;
+	}
+
+	// set debug info to print size and hash to kernel log
+	pr_info("%s: expected size: %u, expected hash: %s\n",
+		path, expected_manager_size, expected_manager_hash);
+
+#ifdef CONFIG_KSU_DEBUG
+	return check_v2_signature(path, EXPECTED_MANAGER_SIZE, EXPECTED_MANAGER_HASH);
+#else
+	return check_v2_signature(path, expected_manager_size, expected_manager_hash);
+#endif
+}
